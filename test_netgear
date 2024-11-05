@@ -1,0 +1,103 @@
+import requests
+from bs4 import BeautifulSoup
+import random
+import json
+import time
+from datetime import datetime, timedelta
+
+# Configuration
+ip_address = "192.168.5.1"
+password = "xxxx"
+session = requests.Session()
+
+# Disable SSL warnings
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+def initialize_session():
+    """
+    Initializes the session with necessary headers.
+    """
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.7.12) Gecko/20050915 Firefox/1.0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'en-US,en;q=0.9',
+    })
+
+def get_token():
+    """
+    Retrieves the CSRF token from the login page.
+    """
+    url = f"http://{ip_address}/index.html"
+    response = session.get(url, verify=False)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    token_input = soup.find('input', {'name': 'token'})
+    return token_input['value'] if token_input else ""
+
+def do_login(token):
+    """
+    Performs the login action using the retrieved token and password.
+    """
+    login_url = f"http://{ip_address}/Forms/config"
+    data = {
+        'token': token,
+        'ok_redirect': '/index.html',
+        'err_redirect': '/index.html',
+        'session.password': password
+    }
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': f"http://{ip_address}",
+        'Referer': f"http://{ip_address}/index.html"
+    }
+    session.post(login_url, data=data, headers=headers, verify=False)
+
+def get_json():
+    """
+    Fetches the JSON data from the device.
+    """
+    random_num = random.randint(0, 65535)
+    json_url = f"http://{ip_address}/api/model.json?internalapi=1&x={random_num}"
+    response = session.get(json_url, verify=False)
+    return response.json()
+
+
+import json
+from datetime import datetime, timedelta
+
+import json
+from datetime import datetime
+
+def extract_device_info(data):
+    device_info = {
+        'time' : int(datetime.utcnow().timestamp() * 1000),
+        'device_id': 'get device id here',
+        'Phone number': data.get('sim', {}).get('phoneNumber'),
+        'SIM status': data.get('sim', {}).get('status'),
+        'State machine state': data.get('power', {}).get('SmState'),
+        'Transmit level': data.get('wwanadv', {}).get('txLevel'),
+        'Receive level': data.get('wwanadv', {}).get('rxLevel'),
+        'Current band': data.get('wwanadv', {}).get('curBand'),
+        'Radio quality': data.get('wwanadv', {}).get('radioQuality'),
+        'Model': data.get('general', {}).get('model'),
+        'Firmware version': data.get('general', {}).get('FWversion'),
+        'Application version': data.get('general', {}).get('appVersion'),
+        'Next Billing Date': data.get('wwan', {}).get('dataUsage',{}).get('generic', {}).get('nextBillingDate'),
+        'Data Transferred Rx': data.get('wwan', {}).get('dataTransferredRx'),
+        'Data Transferred Tx ': data.get('wwan', {}).get('dataTransferredTx'),
+    }
+    return device_info
+
+
+if __name__ == "__main__":
+    initialize_session()
+    token = get_token()
+    do_login(token)
+
+    try:
+        json_data = get_json()
+        # print(json_data)
+        extracted_data = extract_device_info(json_data)
+        print(extracted_data)
+    except KeyboardInterrupt:
+        print("Program terminated.")
