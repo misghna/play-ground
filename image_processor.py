@@ -5,34 +5,23 @@ import time
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError
 from util import get_device_id
-
+from aws_client import get_aws_session
 import socket
 
-# AWS S3 credentials and bucket information
 bucket_name = 's-camera'
-access_key = ''
-secret_key = ''
-session_token = ''  # Optional, if using temporary credentials
 device_id = get_device_id()
 # Axis camera URL
 axis_camera_ip = '192.168.1.223'
 axis_camera_url = 'http://{axis_camera_ip}/mjpg/video.mjpg'
 
 
-
 def write_log(text, session_token=None):
     timestamp_millis = int(time.time() * 1000)
     # Define the S3 object key (path)
     object_key = f'logs/{device_id}_{timestamp_millis}.log'
-    # Create a session with AWS credentials
-    session = boto3.Session(
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        aws_session_token=session_token
-    )
 
     # Create an S3 client
-    s3_client = session.client('s3')
+    s3_client = get_aws_session()
 
     try:
         # Upload the text string as an object to S3
@@ -88,15 +77,9 @@ def capture_image_from_axis():
     
 
 def upload_image_to_s3(image_bytes):
-    # Create a session with AWS credentials
-    session = boto3.Session(
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        aws_session_token=session_token
-    )
 
     # Create an S3 client
-    s3_client = session.client('s3')
+    s3_client = get_aws_session()
 
     # Generate filename based on current UTC date and time (MMDDYYYYTHHMM format)
     timestamp = datetime.utcnow().strftime("%m%d%YT%H%M")
