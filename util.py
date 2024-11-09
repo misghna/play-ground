@@ -1,3 +1,13 @@
+from aws_client import get_aws_session
+import time
+
+bucket_name = 's-camera'
+
+camera_ip_str="169.254.88.77"
+
+def camera_ip():
+    return camera_ip_str
+ 
 def get_device_id():
     """
     Retrieves the Raspberry Pi's unique serial number.
@@ -16,6 +26,24 @@ def get_device_id():
         print(f"An error occurred while retrieving the serial number: {e}")
     return serial
 
-# Example usage
-# serial_number = get_raspberry_pi_serial()
-# print(f"Raspberry Pi Serial Number: {serial_number}")
+def write_log(text, session_token=None):
+    device_id= get_device_id()
+    timestamp_millis = int(time.time() * 1000)
+    # Define the S3 object key (path)
+    object_key = f'logs/{device_id}_{timestamp_millis}.log'
+
+    # Create an S3 client
+    s3_client = get_aws_session()
+
+    try:
+        # Upload the text string as an object to S3
+        msg = f"{timestamp_millis},{device_id},{text}"
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=object_key,
+            Body=msg,
+            ContentType='text/plain'
+        )
+        print(f"Text uploaded successfully to {bucket_name}/{object_key}.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
