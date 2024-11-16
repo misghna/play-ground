@@ -18,7 +18,7 @@ def configure_nmcli(interface_name, ip_address, subnet_mask, gateway, dns_server
         # Convert IP address and subnet mask into CIDR notation
         cidr_notation = f"{ip_address}/{subnet_mask}"
 
-        # Check if a connection exists for the interface
+        # Check if a connection exists for the given interface
         result = subprocess.run(["nmcli", "-t", "-f", "NAME,DEVICE", "con", "show"], capture_output=True, text=True, check=True)
         connections = result.stdout.splitlines()
 
@@ -30,17 +30,18 @@ def configure_nmcli(interface_name, ip_address, subnet_mask, gateway, dns_server
                 break
 
         if connection_name:
-            # Modify the existing connection
+            # Modify the existing connection and explicitly tie it to the correct interface
             print(f"Modifying existing connection '{connection_name}' for interface {interface_name}...")
             subprocess.run([
                 "nmcli", "con", "mod", connection_name,
+                "connection.interface-name", interface_name,
                 "ipv4.addresses", cidr_notation,
                 "ipv4.gateway", gateway,
                 "ipv4.dns", ",".join(dns_servers),
                 "ipv4.method", "manual"
             ], check=True)
         else:
-            # Add a new connection
+            # Create a new connection explicitly tied to the interface
             connection_name = f"Connection_for_{interface_name}"
             print(f"Adding new connection '{connection_name}' for interface {interface_name}...")
             subprocess.run([
@@ -70,7 +71,7 @@ def verify_nmcli():
     result = subprocess.run(["nmcli", "dev", "show"], capture_output=True, text=True, check=True)
     print(result.stdout)
 
-    
+
 first_enx_interface = get_first_enx_interface()
 # Example usage
 
