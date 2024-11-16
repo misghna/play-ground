@@ -13,24 +13,20 @@ def get_first_enx_interface():
     
     return "not found"
 
-
-# Get the first interface and print the result
-
 def configure_nmcli(interface_name, ip_address, subnet_mask, gateway, dns_servers):
     try:
         # Convert IP address and subnet mask into CIDR notation
         cidr_notation = f"{ip_address}/{subnet_mask}"
 
-        # List all existing connections
-        result = subprocess.run(["nmcli", "-t", "-f", "NAME,DEVICE", "con", "show"], capture_output=True, text=True)
+        # Check if a connection exists for the interface
+        result = subprocess.run(["nmcli", "-t", "-f", "NAME,DEVICE", "con", "show"], capture_output=True, text=True, check=True)
         connections = result.stdout.splitlines()
 
-        # Check if a connection for the given interface exists
         connection_name = None
         for connection in connections:
             name, device = connection.split(":")
             if device.strip() == interface_name:
-                connection_name = name
+                connection_name = name.strip()
                 break
 
         if connection_name:
@@ -44,12 +40,14 @@ def configure_nmcli(interface_name, ip_address, subnet_mask, gateway, dns_server
                 "ipv4.method", "manual"
             ], check=True)
         else:
-            # Add a new connection for the interface
-            print(f"Adding new connection for interface {interface_name}...")
+            # Add a new connection
+            connection_name = f"Connection_for_{interface_name}"
+            print(f"Adding new connection '{connection_name}' for interface {interface_name}...")
             subprocess.run([
                 "nmcli", "con", "add",
                 "type", "ethernet",
                 "ifname", interface_name,
+                "con-name", connection_name,
                 "ipv4.addresses", cidr_notation,
                 "ipv4.gateway", gateway,
                 "ipv4.dns", ",".join(dns_servers),
@@ -57,17 +55,21 @@ def configure_nmcli(interface_name, ip_address, subnet_mask, gateway, dns_server
             ], check=True)
 
         # Bring up the connection
-        print(f"Bringing up the connection for {interface_name}...")
-        subprocess.run(["nmcli", "con", "up", interface_name], check=True)
+        print(f"Bringing up the connection '{connection_name}' for {interface_name}...")
+        subprocess.run(["nmcli", "con", "up", connection_name], check=True)
 
         print(f"Network configuration applied successfully for {interface_name}.")
+
     except subprocess.CalledProcessError as e:
         print(f"Error configuring network: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
 def verify_nmcli():
     # Verify the current network configuration
-    result = subprocess.run(["nmcli", "dev", "show"], capture_output=True, text=True)
+    result = subprocess.run(["nmcli", "dev", "show"], capture_output=True, text=True, check=True)
     print(result.stdout)
+
     
 first_enx_interface = get_first_enx_interface()
 # Example usage
