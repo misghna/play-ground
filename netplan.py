@@ -66,8 +66,8 @@ def verify_netplan():
     print(result.stdout)
 
 infname=get_first_enx_interface()
-# Example usage
-if __name__ == "__main__":
+
+def mount_interface():
     # Interface and network configuration details
     interface_name = infname  # Replace with your interface name
     ip_address = "192.168.0.90"  # Replace with your desired IP
@@ -79,3 +79,4 @@ if __name__ == "__main__":
     write_netplan_config(interface_name, ip_address, subnet_mask, gateway, dns_servers)
     apply_netplan()
     verify_netplan()
+    result = subprocess.run(["systemctl", "restart", "isc-dhcp-server"], capture_output=True, text=True)
