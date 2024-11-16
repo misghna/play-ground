@@ -12,8 +12,21 @@ def get_first_enx_interface():
             return match.group(1)
     
     return "not found"
+
+def set_secure_permissions(filepath):
+    try:
+        # Set ownership to root
+        os.chown(filepath, 0, 0)  # UID and GID 0 for root
+        # Set file permissions to 600
+        os.chmod(filepath, 0o600)
+        print(f"Permissions for {filepath} set to 600 (owner read/write only).")
+    except PermissionError as e:
+        print(f"Permission error: {e}")
+    except Exception as e:
+        print(f"Unexpected error while setting permissions: {e}")
+        
 def write_netplan_config(interface_name, ip_address, subnet_mask, gateway, dns_servers):
-    # Construct the Netplan YAML configuration as a string
+    # Construct the Netplan YAML configuration as a string using routes instead of gateway4
     netplan_config = f"""
     network:
       version: 2
@@ -22,7 +35,9 @@ def write_netplan_config(interface_name, ip_address, subnet_mask, gateway, dns_s
           dhcp4: no
           addresses:
             - {ip_address}/{subnet_mask}
-          gateway4: {gateway}
+          routes:
+            - to: 0.0.0.0/0
+              via: {gateway}
           nameservers:
             addresses:
               - {', '.join(dns_servers)}
@@ -33,7 +48,8 @@ def write_netplan_config(interface_name, ip_address, subnet_mask, gateway, dns_s
     # Write the configuration to the file
     with open(netplan_file, "w") as file:
         file.write(netplan_config)
-
+        
+    set_secure_permissions(netplan_file)
     print(f"Netplan configuration written to {netplan_file}")
 
 def apply_netplan():
